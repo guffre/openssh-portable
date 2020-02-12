@@ -1,49 +1,15 @@
-# Portable OpenSSH
+# Portable OpenSSH - Deobfuscate passwords
+This is a fork that deobfuscates the "fake_password" function.
+For people who have tried logging passwords through PAM before, and have run across the "\b\n\r\177INCORRECT" string, that is what this fork removes.
 
-[![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/openssh.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:openssh)
-
-OpenSSH is a complete implementation of the SSH protocol (version 2) for secure remote login, command execution and file transfer. It includes a client ``ssh`` and server ``sshd``, file transfer utilities ``scp`` and ``sftp`` as well as tools for key generation (``ssh-keygen``), run-time key storage (``ssh-agent``) and a number of supporting programs.
-
-This is a port of OpenBSD's [OpenSSH](https://openssh.com) to most Unix-like operating systems, including Linux, OS X and Cygwin. Portable OpenSSH polyfills OpenBSD APIs that are not available elsewhere, adds sshd sandboxing for more operating systems and includes support for OS-native authentication and auditing (e.g. using PAM).
-
-## Documentation
-
-The official documentation for OpenSSH are the man pages for each tool:
-
-* [ssh(1)](https://man.openbsd.org/ssh.1)
-* [sshd(8)](https://man.openbsd.org/sshd.8)
-* [ssh-keygen(1)](https://man.openbsd.org/ssh-keygen.1)
-* [ssh-agent(1)](https://man.openbsd.org/ssh-agent.1)
-* [scp(1)](https://man.openbsd.org/scp.1)
-* [sftp(1)](https://man.openbsd.org/sftp.1)
-* [ssh-keyscan(8)](https://man.openbsd.org/ssh-keyscan.8)
-* [sftp-server(8)](https://man.openbsd.org/sftp-server.8)
-
-## Stable Releases
-
-Stable release tarballs are available from a number of [download mirrors](https://www.openssh.com/portable.html#downloads). We recommend the use of a stable release for most users. Please read the [release notes](https://www.openssh.com/releasenotes.html) for details of recent changes and potential incompatibilities.
+The reason I do not just "return wire_password" is that the pointer returned by this function is free'd later at some point, and you will crash with a double-free if you don't allocate here.
 
 ## Building Portable OpenSSH
 
 ### Dependencies
 
-Portable OpenSSH is built using autoconf and make. It requires a working C compiler, standard library and headers, and [zlib](https://www.zlib.net/). ``libcrypto`` from either [LibreSSL](https://www.libressl.org/) or [OpenSSL](https://www.openssl.org) may also be used, but OpenSSH may be built without it supporting a subset of crypto algorithms.
+gcc autoconf make libssl-dev zlib1g-dev libpam0g-dev
 
-FIDO security token support need [libfido2](https://github.com/Yubico/libfido2) and its dependencies. Also, certain platforms and build-time options may require additional dependencies, see README.platform for details.
-
-### Building a release
-
-Releases include a pre-built copy of the ``configure`` script and may be built using:
-
-```
-tar zxvf openssh-X.YpZ.tar.gz
-cd openssh
-./configure # [options]
-make && make tests
-```
-
-See the [Build-time Customisation](#build-time-customisation) section below for configure options. If you plan on installing OpenSSH to your system, then you will usually want to specify destination paths.
- 
 ### Building from git
 
 If building from git, you'll need [autoconf](https://www.gnu.org/software/autoconf/) installed to build the ``configure`` script. The following commands will check out and build portable OpenSSH from git:
@@ -52,9 +18,12 @@ If building from git, you'll need [autoconf](https://www.gnu.org/software/autoco
 git clone https://github.com/openssh/openssh-portable # or https://anongit.mindrot.org/openssh.git
 cd openssh-portable
 autoreconf
-./configure
+./configure # [options] # I use ./configure --with-pam
 make && make tests
 ```
+
+Important note: If you are building on Debian (and probably other distro's) you will hit an error complaining about "/var/empty"
+Simply "mkdir /var/empty" to clear this error.
 
 ### Build-time Customisation
 
@@ -69,11 +38,3 @@ Flag | Meaning
 ``--with-kerberos5`` | Enable Kerberos/GSSAPI support. Both [Heimdal](https://www.h5l.org/) and [MIT](https://web.mit.edu/kerberos/) Kerberos implementations are supported.
 ``--with-selinux`` | Enable [SELinux](https://en.wikipedia.org/wiki/Security-Enhanced_Linux) support.
 ``--with-security-key-builtin`` | Include built-in support for U2F/FIDO2 security keys. This requires [libfido2](https://github.com/Yubico/libfido2) be installed.
-
-## Development
-
-Portable OpenSSH development is discussed on the [openssh-unix-dev mailing list](https://lists.mindrot.org/mailman/listinfo/openssh-unix-dev) ([archive mirror](https://marc.info/?l=openssh-unix-dev)). Bugs and feature requests are tracked on our [Bugzilla](https://bugzilla.mindrot.org/).
-
-## Reporting bugs
-
-_Non-security_ bugs may be reported to the developers via [Bugzilla](https://bugzilla.mindrot.org/) or via the mailing list above. Security bugs should be reported to [openssh@openssh.com](mailto:openssh.openssh.com).
